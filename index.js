@@ -104,12 +104,25 @@ function averagePrice(price1, price2, price3) {
 }
 function saveConsolidatedPriceToDatabase(currency, priceBinance, priceCoinbasePro, priceBitstamp) {
         console.log('Saving!')
-        const newConsolidatedPriceEntry = new ConsolidatedPriceEntry({
-            currency, priceBinance, priceCoinbasePro, priceBitstamp, averagePrice: averagePrice(priceBinance, priceCoinbasePro, priceBitstamp)
-        });
-        newConsolidatedPriceEntry.save()
-        .then(priceEntry => console.log(priceEntry))
-        .catch(err => console.log(err));
+        console.log(new Date().toISOString().split("T")[0])
+        ConsolidatedPriceEntry.find({date: new Date().toISOString().split("T")[0]})
+        .then(response => {
+            // console.log(response)
+            if (response.length === 0){
+                console.log('Saving price for the day')
+                const newConsolidatedPriceEntry = new ConsolidatedPriceEntry({
+                    date: new Date().toISOString().split("T")[0], currency, priceBinance, priceCoinbasePro, priceBitstamp, averagePrice: averagePrice(priceBinance, priceCoinbasePro, priceBitstamp)
+                });
+                newConsolidatedPriceEntry.save()
+                // .then(priceEntry => console.log(priceEntry))
+                // .catch(err => console.log(err));
+            } else {
+                console.log('Value for today already in db!')
+            }
+        })
+        .catch(err => {
+            console.log(err)
+        })
 }
 var priceBinanceEth
 , priceBinanceBtc
@@ -190,7 +203,7 @@ function runOncePerDay() {
         this.getCoinbaseProBtc()
         this.getBitstampEth()
         this.getBitstampBtc()
-        if(date.getHours() === 10 && date.getMinutes() === 30){ // Check the time
+        if(date.getHours() === 10 && date.getMinutes() === 49){ // Check the time
             if(priceBinanceBtc
                 || priceCoinbaseProBtc
                 || priceBitstampBtc
@@ -203,7 +216,7 @@ function runOncePerDay() {
         } else {
             console.log('Timing does not align at this time.')
         }
-    }, 20000)
+    }, 1000)
 }
 
 runOncePerDay();
