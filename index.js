@@ -216,7 +216,7 @@ function runOncePerDay() {
         } else {
             console.log('Timing does not align at this time.')
         }
-    }, 1000)
+    }, 5000)
 }
 
 runOncePerDay();
