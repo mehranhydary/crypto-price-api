@@ -8,7 +8,7 @@ const ConsolidatedPriceEntrySchema = new Schema({
   priceCoinbasePro: String,
   priceBitstamp: String,
   averagePrice: String,
-  date: { type: Date, default: Date.now() }
+  date: { type: Date, default: new Date().toLocaleString("en-US", {timeZone: "America/New_York"}) }
 });
 
 module.exports = ConsolidatedPriceEntry = mongoose.model("consolidatedPriceEntries", ConsolidatedPriceEntrySchema);

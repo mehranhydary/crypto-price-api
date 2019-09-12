@@ -12,6 +12,8 @@ const ConsolidatedPriceEntry = require ('./models/ConsolidatedPriceEntry')
 // Routes
 const priceEntries = require("./routes/api/priceEntries");
 const consolidatedPriceEntries = require("./routes/api/consolidatedPriceEntries");
+
+// Cors 
 app.use(cors())
 
 mongoose.connect(process.env.MONGO_URI, {useNewUrlParser: true})
@@ -64,7 +66,6 @@ app.get('/bitstamp-eth', (req, res) => {
         console.error('error:', error); // Print the error if one occurred
         if(error)
             return
-        console.log(body)
         res.status(200).send({
             statusCode: response.statusCode,
             body
@@ -76,7 +77,6 @@ app.get('/bitstamp-btc', (req, res) => {
         console.error('error:', error); // Print the error if one occurred
         if(error)
             return
-        console.log(body)
         res.status(200).send({
             statusCode: response.statusCode,
             body
@@ -85,37 +85,24 @@ app.get('/bitstamp-btc', (req, res) => {
 })
 function averagePrice(price1, price2, price3) {
     if(isNaN(price1)) {
-        console.log(1, (price2 + price3) / 2)
         return (price2 + price3) / 2
     } else if(isNaN(price2)) {
-        console.log(2, (price1 + price3) / 2)
         return (price1 + price3) / 2
     } else if(isNaN(price3)) {
-        console.log(3, (price1 + price2) / 2)
         return (price1 + price2) / 2
     } else if(isNaN(price1) && isNaN(price2)) {
-        console.log(4, price3)
         return price3
     } else if(isNaN(price1) && isNaN(price3)) {
-        console.log(5, price2)
         return price2
     } else if(isNaN(price2) && isNaN(price3)) {
-        console.log(6, price1)
         return price1
     } else if(isNaN(price1) && isNaN(price2) && isNaN(price3)) {
-        console.log(7, null)
         return null
     } else {
-        console.log(8, (price1 + price2 + price3) / 3)
         return (price1 + price2 + price3) / 3
     }
 }
 function saveConsolidatedPriceToDatabase(currency, priceBinance, priceCoinbasePro, priceBitstamp) {
-    console.log(currency, priceBinance, priceCoinbasePro, priceBitstamp)
-    // if(isNaN(priceBinance) || isNaN(priceCoinbasePro) || isNaN(priceBitstamp)){
-        // console.log(isNaN(priceBinance), isNaN(priceCoinbasePro), isNaN(priceBitstamp))
-        // return 
-    // } else {
         console.log('Saving!')
         const newConsolidatedPriceEntry = new ConsolidatedPriceEntry({
             currency, priceBinance, priceCoinbasePro, priceBitstamp, averagePrice: averagePrice(priceBinance, priceCoinbasePro, priceBitstamp)
@@ -123,7 +110,6 @@ function saveConsolidatedPriceToDatabase(currency, priceBinance, priceCoinbasePr
         newConsolidatedPriceEntry.save()
         .then(priceEntry => console.log(priceEntry))
         .catch(err => console.log(err));
-    // }
 }
 var priceBinanceEth
 , priceBinanceBtc
@@ -138,8 +124,7 @@ getBinanceEth = () => {
             if(!isNaN(JSON.parse(body).price))
                 priceBinanceEth = parseFloat(JSON.parse(body).price)
             else 
-                null
-            console.log(priceBinanceEth)
+                getBinanceEth()
         }
     })
 }
@@ -149,8 +134,7 @@ getBinanceBtc = () => {
             if(!isNaN(JSON.parse(body).price))
                 priceBinanceBtc = parseFloat(JSON.parse(body).price)
             else 
-                null
-            console.log(priceBinanceBtc)
+                getBinanceBtc()
         }
     })
 }
@@ -160,8 +144,7 @@ getCoinbaseProEth = () => {
             if(!isNaN(JSON.parse(body).price))
                 priceCoinbaseProEth = parseFloat(JSON.parse(body).price)
             else 
-                null
-            console.log(priceCoinbaseProEth)
+                getCoinbaseProEth()
         }
     })
 }            
@@ -171,30 +154,27 @@ getCoinbaseProBtc = () => {
             if(!isNaN(JSON.parse(body).price))
                 priceCoinbaseProBtc = parseFloat(JSON.parse(body).price)
             else 
-                null
-            console.log(priceCoinbaseProBtc)
+                getCoinbaseProBtc()
         }
     })
 }            
 getBitstampEth = () => {
     request('https://www.bitstamp.net/api/v2/ticker/ethusd', function (error, response, body) {
         if(body) {
-            if(!isNaN(JSON.parse(body).price))
+            if(!isNaN(JSON.parse(body).last))
                 priceBitstampEth = parseFloat(JSON.parse(body).last)
             else 
-                null
-            console.log(priceBitstampEth)
+            getBitstampEth()
         }
     })
 }
 getBitstampBtc = () => {
     request('https://www.bitstamp.net/api/v2/ticker/btcusd', function (error, response, body) {
         if(body) {
-            if(!isNaN(JSON.parse(body).price))
+            if(!isNaN(JSON.parse(body).last))
                 priceBitstampBtc = parseFloat(JSON.parse(body).last)
             else 
-                null
-            console.log(priceBitstampBtc)
+                getBitstampBtc()
         }
     })
 }
@@ -202,7 +182,7 @@ getBitstampBtc = () => {
 
 function runOncePerDay() {
     setInterval(() => {
-        var date = new Date(); // Create a Date object to find out what time it is
+        var date = new Date()
         console.log(date.getHours(), date.getMinutes())
         this.getBinanceEth()
         this.getBinanceBtc()
@@ -210,9 +190,16 @@ function runOncePerDay() {
         this.getCoinbaseProBtc()
         this.getBitstampEth()
         this.getBitstampBtc()
-        if(date.getHours() === 9 && date.getMinutes() === 4){ // Check the time
-            saveConsolidatedPriceToDatabase('BTC', priceBinanceBtc, priceCoinbaseProBtc, priceBitstampBtc)
-            saveConsolidatedPriceToDatabase('ETH', priceBinanceEth, priceCoinbaseProEth, priceBitstampEth)
+        if(date.getHours() === 10 && date.getMinutes() === 30){ // Check the time
+            if(priceBinanceBtc
+                || priceCoinbaseProBtc
+                || priceBitstampBtc
+                || priceBinanceEth
+                || priceCoinbaseProEth
+                || priceBitstampEth){ 
+                saveConsolidatedPriceToDatabase('BTC', priceBinanceBtc, priceCoinbaseProBtc, priceBitstampBtc)
+                saveConsolidatedPriceToDatabase('ETH', priceBinanceEth, priceCoinbaseProEth, priceBitstampEth)
+            }
         } else {
             console.log('Timing does not align at this time.')
         }
